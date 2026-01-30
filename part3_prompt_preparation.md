@@ -8,13 +8,10 @@
 
 MetaGPT is a multi-agent framework that simulates a software company by assigning different roles to large language models. The framework includes agents that act as Product Managers, Architects, Engineers, and QA specialists, all collaborating to complete software development tasks. MetaGPT implements a "Code = SOP(Team)" philosophy, where Standard Operating Procedures are encoded as agent behaviors that coordinate through structured message passing.
 
-The intended users are AI researchers, software developers, and teams exploring autonomous agent systems for software development. They use MetaGPT to automate code generation, project scaffolding, documentation creation, and software architecture design. The framework enables natural language programming where users describe what they want to build, and the agent team collaboratively generates working code.
+The intended users are AI researchers, software developers, and teams exploring autonomous agent systems for software development. They use MetaGPT to automate code generation, project scaffolding, documentation creation, and software architecture design. The framework enables natural language programming where users describe what they want to build through prompts, and the agent team collaboratively generates working code.
 
 The problem domain MetaGPT addresses is the challenge of making large language models effective at complex, multi-step software development tasks. Single-prompt approaches often produce incomplete or inconsistent code. By breaking tasks into specialized roles with defined workflows, MetaGPT achieves better results through agent collaboration and iterative refinement.
 
-MetaGPT's architecture consists of role-based agents (each with specific responsibilities), actions (atomic tasks agents can perform), a memory system (for maintaining context), and utilities for code generation and project management. Agents communicate through a message bus, following SOPs that define how different roles interact during software development.
-
-A critical capability for MetaGPT agents is understanding existing codebases. When asked to modify, document, or analyze code, agents need access to the complete repository structure and contents. Providing this information efficiently to language models requires converting repositories into a format that fits within token limits while preserving structure and relationships between files.
 
 ---
 
