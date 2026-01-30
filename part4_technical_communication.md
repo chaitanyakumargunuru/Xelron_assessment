@@ -6,7 +6,7 @@
 
 ---
 
-## Response (250-350 words)
+## Response 
 
 I chose the MetaGPT repository-to-markdown PR (#1061) because it represents a practical utility that solves a real problem in AI-assisted development, while being scoped appropriately for implementation and demonstration.
 
