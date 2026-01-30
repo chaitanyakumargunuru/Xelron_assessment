@@ -1,4 +1,4 @@
-# Part 2: Pull Request Analysis (Updated)
+# Part 2: Pull Request Analysis 
 
 ## Selected Pull Requests
 
