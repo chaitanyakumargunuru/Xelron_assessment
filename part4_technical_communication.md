@@ -12,7 +12,7 @@ I chose the MetaGPT repository-to-markdown PR (#1061) because it represents a pr
 
 **Selection Rationale:**
 
-This PR appealed to me because it addresses a pattern I have encountered repeatedly when working with language models for code-related tasks - the challenge of providing complete codebase context efficiently. The tool converts an abstract need ("the AI needs to understand my repository") into concrete functionality with clear inputs (a repository directory) and outputs (a markdown document). The scope is focused enough to implement thoroughly while being substantial enough to demonstrate real engineering capability.
+This PR grabbed my attention because it addresses the problem I have encountered repeatedly when working with language models for code-related tasks - the challenge of providing complete codebase context efficiently. The tool converts an abstract need ("the AI needs to understand my repository") into concrete functionality with clear inputs (a repository directory) and outputs (a markdown document). The scope is focused enough to implement thoroughly while being substantial enough to demonstrate real engineering capability.
 
 The PR also showcases good software engineering practices: it adds utility functionality with proper testing, includes code review feedback, and demonstrates incremental development (the tree utility was developed separately then integrated). The domain-specific value for MetaGPT's use case made it particularly interesting.
 
