@@ -1,149 +1,206 @@
-# Part 3: Prompt Preparation
+# Part 3: Prompt Preparation 
 
-## Selected PR: Archivematica #1493 - Support LDAP Authentication Config via Environment Variables
-
----
-
-## 3.1 Repository Context (200-300 words)
-
-Archivematica is an open-source digital preservation system designed for cultural heritage institutions such as museums, libraries, and archives. The system processes digital objects through standardized workflows to create Archival Information Packages that can be preserved for decades or centuries. Archivematica implements the OAIS reference model, an ISO standard for long-term digital preservation.
-
-The intended users are archivists, digital preservation specialists, and IT administrators working in memory institutions. These users need to ingest digital content (documents, images, audio, video, datasets) and create preservation packages that include original files, preservation copies, metadata, and documentation. The system handles format identification, validation, normalization, metadata extraction, and packaging according to standards like METS and PREMIS.
-
-The problem domain Archivematica addresses is the challenge of ensuring long-term access to digital materials. Unlike physical objects, digital files require active management to remain accessible as file formats, software, and hardware evolve. Organizations need systems that document every action taken on digital objects, maintain fixity information to detect corruption, and store files in ways that maximize the chances of future accessibility.
-
-Archivematica is built as a microservices architecture using Python and Django for the web Dashboard, with Gearman managing job queues between the MCPServer (orchestrator) and MCPClient (workers). The system integrates with storage backends, format policy registries, and external systems. Authentication is crucial because archivematica handles sensitive cultural materials and must control who can access, modify, or delete preservation packages. The system supports multiple authentication backends including local Django auth, CAS, Shibboleth, and LDAP for integration with institutional identity management systems.
+## Selected PR: MetaGPT #1061 - Repository to Markdown Tool
 
 ---
 
-## 3.2 Pull Request Description (200-300 words)
+## 3.1 Repository Context 
 
-This pull request introduces the capability to configure LDAP authentication through environment variables instead of requiring modifications to Python settings files. Currently, users who want to enable LDAP authentication must edit the Dashboard's settings.py file to add LDAP server configuration, bind credentials, and search parameters. This approach creates several problems for modern deployments.
+MetaGPT is a multi-agent framework that simulates a software company by assigning different roles to large language models. The framework includes agents that act as Product Managers, Architects, Engineers, and QA specialists, all collaborating to complete software development tasks. MetaGPT implements a "Code = SOP(Team)" philosophy, where Standard Operating Procedures are encoded as agent behaviors that coordinate through structured message passing.
 
-The specific changes introduce environment variable parsing in the Django settings file that reads LDAP configuration parameters from the system environment. The implementation adds environment variables like AUTH_LDAP_SERVER_URI for the LDAP server address, AUTH_LDAP_BIND_DN and AUTH_LDAP_BIND_PASSWORD for connection credentials, AUTH_LDAP_USER_SEARCH_BASE_DN and AUTH_LDAP_USER_SEARCH_BASE_FILTERSTR for user lookup configuration, and AUTH_LDAP_START_TLS for secure connection settings.
+The intended users are AI researchers, software developers, and teams exploring autonomous agent systems for software development. They use MetaGPT to automate code generation, project scaffolding, documentation creation, and software architecture design. The framework enables natural language programming where users describe what they want to build, and the agent team collaboratively generates working code.
 
-A new signals.py module was created to properly handle the LDAP user population signal from django-auth-ldap. This separates authentication concerns from the main settings file and provides a clean integration point. The implementation includes proper handling of import errors so the code works in contexts where LDAP libraries are not installed (such as the MCPClient workers).
+The problem domain MetaGPT addresses is the challenge of making large language models effective at complex, multi-step software development tasks. Single-prompt approaches often produce incomplete or inconsistent code. By breaking tasks into specialized roles with defined workflows, MetaGPT achieves better results through agent collaboration and iterative refinement.
 
-The previous behavior required administrators to edit Python source files, rebuild containers, or create complex configuration file mounting schemes. This was error-prone, made version control difficult, and required understanding Django's settings structure. Credentials stored in source files also created security risks. The new behavior allows administrators to simply set environment variables in their docker-compose.yml, Kubernetes manifests, or systemd service files. The LDAP configuration becomes declarative and can be managed through standard secrets management tools. This aligns with twelve-factor app methodology and modern DevOps practices, making Archivematica deployments more maintainable and secure.
+MetaGPT's architecture consists of role-based agents (each with specific responsibilities), actions (atomic tasks agents can perform), a memory system (for maintaining context), and utilities for code generation and project management. Agents communicate through a message bus, following SOPs that define how different roles interact during software development.
+
+A critical capability for MetaGPT agents is understanding existing codebases. When asked to modify, document, or analyze code, agents need access to the complete repository structure and contents. Providing this information efficiently to language models requires converting repositories into a format that fits within token limits while preserving structure and relationships between files.
+
+---
+
+## 3.2 Pull Request Description 
+
+This pull request introduces a utility tool that converts entire code repositories into structured markdown documents, enabling MetaGPT agents to understand and work with existing codebases effectively. The tool recursively traverses repository directories, respects gitignore patterns to exclude irrelevant files, and generates a markdown document containing both the directory structure and file contents.
+
+The specific changes include creating a tree visualization utility that generates ASCII-art directory trees showing the repository's hierarchical structure, and the main repository-to-markdown converter that walks directories, reads source files, and formats them into markdown code blocks with appropriate syntax highlighting hints. The implementation includes a --gitfile option that uses git's index to determine which files to include, ensuring only version-controlled files are processed.
+
+These changes are needed because MetaGPT agents frequently need to analyze, modify, or document entire projects. Previously, there was no standardized way to provide repository context to agents. Agents would either miss important files, or developers would manually copy-paste code which is time-consuming and error-prone. The markdown format is ideal because it's text-based (works with language models), structured (preserves relationships), and widely supported.
+
+The previous behavior required users to manually prepare repository information for agents, often by copying relevant files piecemeal. This approach missed important context like directory structure, file relationships, and project organization. The new behavior automatically generates a comprehensive repository snapshot in a single command, producing a markdown file that can be directly fed to MetaGPT agents or used in conversations with the multi-agent system.
+
+The implementation preserves the visual directory tree at the beginning of the document, followed by the full content of each file with clear headers, making it easy for both humans and AI agents to navigate the repository structure and locate specific code sections.
 
 ---
 
 ## 3.3 Acceptance Criteria (Minimum 5 criteria)
 
-✓ When AUTH_LDAP_SERVER_URI is set as an environment variable, the system should connect to the specified LDAP server URL for authentication attempts.
+✓ When the tool runs on a repository directory, it should generate a valid markdown file containing both directory structure and file contents.
 
-✓ When AUTH_LDAP_BIND_DN and AUTH_LDAP_BIND_PASSWORD are provided, the system should successfully bind to the LDAP server using these credentials before attempting user searches.
+✓ The generated markdown should include an ASCII-art tree view of the directory structure at the beginning, showing folders and files hierarchically.
 
-✓ When AUTH_LDAP_USER_SEARCH_BASE_DN and AUTH_LDAP_USER_SEARCH_BASE_FILTERSTR are configured, the implementation should search for users in the specified base DN using the provided filter string with proper %(user)s substitution.
+✓ Each source file should be included in the markdown with its full relative path as a header and content wrapped in appropriate markdown code blocks with language identifiers (e.g., ```python).
 
-✓ The implementation should handle AUTH_LDAP_START_TLS environment variable by properly converting the string value "true"/"false" to boolean and enabling/disabling TLS accordingly.
+✓ The tool should respect .gitignore patterns, excluding files and directories specified in gitignore from the generated markdown.
 
-✓ When no LDAP environment variables are set, the system should continue to function normally with existing authentication methods without errors or warnings.
+✓ When the --gitfile option is used, the tool should only include files tracked by git, determined by reading git's index or using git ls-files.
 
-✓ The implementation should maintain backward compatibility with existing file-based LDAP configurations while allowing environment variables to take precedence when set.
+✓ Binary files, images, and other non-text files should be detected and excluded from the markdown output (or noted as binary without including content).
 
-✓ When the django-auth-ldap library is not installed, the Dashboard should import without raising ImportError and gracefully skip LDAP configuration.
+✓ The tool should handle repositories with various programming languages, correctly identifying language for syntax highlighting in code blocks.
 
-✓ The LDAP user population signal should correctly populate user attributes (username, email, groups) from LDAP directory into the Django user model.
+✓ The output markdown file should be properly formatted and valid according to markdown specifications, parseable by standard markdown processors.
+
+✓ The tool should handle edge cases like empty directories, files with special characters in names, and deeply nested directory structures without errors.
 
 ---
 
 ## 3.4 Edge Cases (Minimum 3 cases)
 
-**Edge Case 1: Missing Required Environment Variables**
-If AUTH_LDAP_SERVER_URI is set but AUTH_LDAP_USER_SEARCH_BASE_DN is missing, the LDAP authentication will be partially configured. The implementation should either fail gracefully with a clear error message during startup or use sensible defaults. The system should not silently fail authentication attempts with unclear error messages.
+**Edge Case 1: Large Repositories Exceeding Token Limits**
 
-**Edge Case 2: LDAP Server Unavailability During Startup**
-When the Dashboard starts with LDAP configured but the LDAP server specified in AUTH_LDAP_SERVER_URI is not reachable, the application should still start successfully. Authentication attempts should fail with appropriate user-facing error messages rather than causing the entire application to crash. The system should handle network timeouts and connection errors without blocking the startup process.
+When processing very large repositories (thousands of files, millions of lines of code), the generated markdown could exceed language model token limits. The tool should either provide options to filter files by pattern (e.g., only include *.py files), split output into multiple markdown files organized by directory, or implement intelligent sampling strategies. Users should receive warnings when output size is likely to exceed common LLM context windows.
 
-**Edge Case 3: Boolean String Conversion**
-The AUTH_LDAP_START_TLS variable comes from environment as a string but needs to be a Python boolean. The implementation must correctly handle various string representations including "true", "True", "TRUE", "false", "False", "FALSE", "1", "0", "yes", "no" and provide appropriate defaults for empty strings or malformed values. Invalid values should be logged and default to the safest option (TLS enabled).
+**Edge Case 2: Files with Encoding Issues**
 
-**Edge Case 4: Special Characters in LDAP Credentials**
-When AUTH_LDAP_BIND_PASSWORD contains special characters like quotes, backslashes, or environment variable syntax ($, %, etc.), the environment variable parsing must correctly preserve these characters without interpretation or escaping issues. The bind password should be used exactly as provided to authenticate with the LDAP server.
+Source files may use various character encodings (UTF-8, Latin-1, etc.), contain non-printable characters, or have encoding errors. The tool must handle these gracefully, either by attempting multiple encoding detections (using libraries like chardet), replacing problematic characters with placeholders, or skipping files that cannot be decoded while logging warnings. The tool should never crash due to encoding issues.
 
-**Edge Case 5: MCPClient Context Import**
-The MCPClient workers share some code paths with the Dashboard but don't need LDAP authentication since they don't handle user requests. When the settings file with LDAP configuration is imported in MCPClient context, the django-auth-ldap library may not be present. The implementation must catch the ImportError and continue execution without attempting to configure LDAP, while still allowing the MCPClient to function normally.
+**Edge Case 3: Symbolic Links and Circular References**
+
+Repositories may contain symbolic links that create circular directory references or link to locations outside the repository. The tool must detect and handle these to avoid infinite loops during directory traversal. Implementation should track visited directories (using resolved absolute paths) and skip links that would create cycles or point outside the repository boundary.
+
+**Edge Case 4: Git Submodules**
+
+Repositories using git submodules present special challenges. Submodules are separate git repositories nested within the main repository. The tool should handle these by either treating submodule directories as opaque (showing only that a submodule exists without traversing it) or providing an option to recursively process submodules. The implementation must respect each submodule's own gitignore rules.
+
+**Edge Case 5: Special Files and Metadata**
+
+Some repositories contain special files like .git directories, __pycache__ folders, node_modules, or large binary assets. The tool must intelligently skip these automatically even if not explicitly in gitignore. The implementation should have a default exclusion list for common build artifacts and dependency directories across different ecosystems (Python, Node.js, Java, etc.) to prevent bloating the output with irrelevant content.
 
 ---
 
-## 3.5 Initial Prompt (300-500 words)
+## 3.5 Initial Prompt 
 
-**Task: Implement LDAP Authentication Configuration via Environment Variables**
+**Task: Implement Repository to Markdown Conversion Tool for MetaGPT**
 
-You are working on Archivematica, a digital preservation system built with Django. Your task is to modify the Dashboard component to support LDAP authentication configuration through environment variables instead of requiring hard-coded settings in Python files.
+You are working on MetaGPT, a multi-agent framework for AI-powered software development. Your task is to create a utility tool that converts code repositories into structured markdown documents that can be easily consumed by MetaGPT's AI agents.
 
 **Context:**
 
-Archivematica's Dashboard is a Django application that currently supports LDAP authentication through the django-auth-ldap library, but the configuration must be written directly in the settings.py file. This creates problems for containerized deployments where configuration should be managed through environment variables. Your implementation should allow administrators to configure LDAP authentication by setting environment variables in their deployment environment.
+MetaGPT agents need to understand existing codebases to perform tasks like code review, documentation generation, refactoring, and analysis. Language models work best with text-based, structured input. Your tool will enable agents to receive complete repository context in a format optimized for LLM consumption.
 
 **Requirements:**
 
-1. Modify `src/dashboard/src/main/settings.py` to read LDAP configuration from environment variables:
-   - AUTH_LDAP_SERVER_URI: The LDAP server URL (e.g., "ldap://ldap.example.com")
-   - AUTH_LDAP_BIND_DN: The DN to use when binding to LDAP (e.g., "cn=admin,dc=example,dc=org")
-   - AUTH_LDAP_BIND_PASSWORD: The password for the bind DN
-   - AUTH_LDAP_USER_SEARCH_BASE_DN: The base DN for user searches (e.g., "ou=users,dc=example,dc=org")
-   - AUTH_LDAP_USER_SEARCH_BASE_FILTERSTR: The filter string for user searches (e.g., "(uid=%(user)s)")
-   - AUTH_LDAP_START_TLS: Boolean flag to enable STARTTLS (string "true" or "false")
+1. Create `metagpt/utils/tree.py`:
+   - Implement a function that generates ASCII-art directory trees
+   - Use box-drawing characters (├──, └──, │) for visual structure
+   - Support recursive directory traversal
+   - Return string representation of the tree
 
-2. Create a new file `src/dashboard/src/main/signals.py` that:
-   - Imports and handles the ldap_populate_user signal from django_auth_ldap.backend
-   - Provides a signal handler for proper LDAP user population
-   - Handles ImportError gracefully if django-auth-ldap is not installed
+2. Create `metagpt/utils/repo_to_markdown.py`:
+   - Implement main conversion function that takes repository path as input
+   - Walk directory tree recursively using pathlib
+   - Read .gitignore and exclude matching files/directories
+   - Add --gitfile option to only include git-tracked files
+   - Generate markdown with two sections:
+     a) Directory tree view at the top
+     b) File contents with headers and code blocks
+   - Detect file types and add appropriate language identifiers to code blocks
+   - Handle binary files gracefully (skip or note as binary)
 
-3. Update settings.py to:
-   - Import the signals module with error handling
-   - Parse environment variables with appropriate type conversions (especially AUTH_LDAP_START_TLS to boolean)
-   - Configure AUTH_LDAP_* Django settings only when environment variables are present
-   - Maintain backward compatibility with existing configurations
+3. Create `tests/metagpt/utils/test_repo_to_markdown.py`:
+   - Test basic conversion with a sample repository structure
+   - Test gitignore pattern handling
+   - Test various file types and encodings
+   - Test edge cases like empty directories and special characters
 
-4. Update documentation in `src/dashboard/install/README.md` to include a table describing each environment variable, its purpose, and example values.
+4. Create `tests/metagpt/utils/test_tree.py`:
+   - Test tree generation for various directory structures
+   - Verify correct ASCII art formatting
+   - Test depth limits if implemented
 
-**Testing Requirements:**
+5. Update `metagpt/utils/__init__.py`:
+   - Export the new utility functions for easy import
 
-Ensure your implementation can be tested with an OpenLDAP Docker container using these settings:
-```
-LDAP_ORGANISATION: "Example Org"
-LDAP_DOMAIN: "example.org"
-LDAP_ADMIN_PASSWORD: "admin"
-```
+**Technical Specifications:**
+
+- Use `pathlib.Path` for cross-platform path handling
+- Use `gitignore_parser` or similar library for .gitignore support
+- For git integration, use subprocess to call `git ls-files` when --gitfile is used
+- Detect binary files using magic bytes or file extensions
+- Support language detection for syntax highlighting (Python, JavaScript, Java, etc.)
+- Write output to a file with timestamp or hash in filename to avoid overwrites
 
 **Acceptance Criteria Reference:**
 
 Your implementation must satisfy all acceptance criteria listed in section 3.3, particularly:
-- Proper environment variable parsing and type conversion
-- Graceful handling of missing django-auth-ldap library
-- Backward compatibility with existing authentication configurations
-- Clear documentation of configuration options
+- Valid markdown output with tree view and file contents
+- Proper gitignore handling
+- Binary file exclusion
+- Correct syntax highlighting hints
 
 **Edge Cases to Consider:**
 
 Pay special attention to the edge cases identified in section 3.4:
-- Partial LDAP configuration (some variables set, others missing)
-- LDAP server unavailability during application startup
-- Various string representations of boolean values
-- Special characters in passwords
-- Import errors in MCPClient context
+- Large repositories that might exceed token limits
+- Files with encoding issues or special characters
+- Symbolic links and circular references
+- Git submodules
+- Common build artifacts and dependencies (node_modules, __pycache__, etc.)
 
-**Code Quality:**
+**Code Quality Standards:**
 
-Follow Django and Python best practices:
-- Use `os.environ.get()` with appropriate defaults
-- Include proper error handling and logging
-- Keep the signals module focused and single-purpose
-- Add clear comments explaining the configuration logic
-- Ensure PEP 8 compliance
+- Follow MetaGPT's coding style and conventions
+- Add comprehensive docstrings for all functions
+- Use type hints for function parameters and returns
+- Include error handling with informative messages
+- Log warnings for skipped files or issues encountered
+
+**Testing Requirements:**
+
+- Create a test repository structure with various file types
+- Test with actual git repositories to verify git integration
+- Verify markdown output is valid and properly formatted
+- Test performance with moderately large repositories (100+ files)
+- Ensure tool works on Windows, Linux, and macOS
+
+**Output Format Example:**
+
+```markdown
+# Repository Structure
+
+\```
+project/
+├── src/
+│   ├── main.py
+│   └── utils.py
+└── tests/
+    └── test_main.py
+\```
+
+# File Contents
+
+## src/main.py
+
+\```python
+def main():
+    print("Hello, world!")
+\```
+
+## src/utils.py
+
+\```python
+def helper():
+    return 42
+\```
+```
 
 **Deliverables:**
 
-1. Modified settings.py with environment variable configuration
-2. New signals.py module
-3. Updated README.md documentation
-4. Confirmation that the implementation works with the test LDAP container configuration
+1. Working tree.py utility module
+2. Complete repo_to_markdown.py implementation
+3. Comprehensive test suites for both utilities
+4. Example output markdown from running on a sample repository
+5. Brief usage documentation
 
 ---
 
-## Integrity Declaration
-
-I declare that all written content in this assessment is my own work, created without the use of AI language models or automated writing tools. All technical analysis and documentation reflects my personal understanding and has been written in my own words.
