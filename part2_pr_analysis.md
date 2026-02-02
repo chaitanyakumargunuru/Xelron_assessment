@@ -57,8 +57,8 @@ This PR contributes by adding functionality that can create a single markdown do
 ### Technical Changes
 
 **Modified Files/Components:**
-* `metagpt/utils/repo_to_markdown.py` (NEW) - Main tool implementation (~100 lines)
-* `metagpt/utils/tree.py` (NEW) - Directory tree visualization utility (~50 lines)
+* `metagpt/utils/repo_to_markdown.py` (NEW) - Main tool implementation 
+* `metagpt/utils/tree.py` (NEW) - Directory tree visualization utility 
 * `tests/metagpt/utils/test_repo_to_markdown.py` (NEW) - Unit tests for the tool
 * `tests/metagpt/utils/test_tree.py` (NEW) - Unit tests for tree utility
 
